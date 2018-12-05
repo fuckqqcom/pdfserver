@@ -26,7 +26,7 @@ func main() {
 		r.GET("/scan", scan)
 
 	}
-	router.Run(":8080")
+	router.Run(":80")
 }
 
 func scan(c *gin.Context) {
@@ -50,7 +50,8 @@ func pdf(c *gin.Context, filename, name string) {
 	resp, _ := http.DefaultClient.Do(req)
 	f, err := os.OpenFile("./static/pdf/"+name, os.O_RDWR|os.O_CREATE, 0755)
 	if err == nil {
-		io.Copy(f, resp.Body)
+		i, err := io.Copy(f, resp.Body)
+		fmt.Println("copy", i, err)
 		f.Close()
 	}
 	defer resp.Body.Close()
@@ -64,9 +65,9 @@ func pdf(c *gin.Context, filename, name string) {
 	//c.Writer.Header().Set("Content-type", "application/pdf")
 
 	//1. buf.WriteTo
-	// if _, err := buf.WriteTo(c.Writer); err != nil {
-	// 	fmt.Fprintf(c.Writer, "%s", err)
-	// }
+	//if _, err := buf.WriteTo(c.Writer); err != nil {
+	//	fmt.Fprintf(c.Writer, "%s", err)
+	//}
 
 	//2. 使用io.Pipe()开启读写双通道， io.Copy
 	//piper, pipew := io.Pipe()
@@ -74,11 +75,11 @@ func pdf(c *gin.Context, filename, name string) {
 	//	defer pipew.Close()
 	//	io.Copy(pipew, buf)
 	//}()
-	//io.Copy(c.Writer, piper)
+	//io.Copy(f, piper)
 	//piper.Close()
 
 	m := " <iframe id='iframe' frameborder='0' src='/static/web/viewer.html?file=/static/pdf/" + name + "' style='width:100%;'></iframe>"
-	fmt.Println(m)
+	// fmt.Println(m)
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"data": template.HTML(m),
 	})
