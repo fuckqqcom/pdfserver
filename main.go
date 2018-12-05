@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,7 +30,7 @@ func main() {
 		r.GET("/scan", scan)
 
 	}
-	router.Run(":8888")
+	router.Run(":80")
 }
 
 func scan(c *gin.Context) {
@@ -48,13 +50,19 @@ func scan(c *gin.Context) {
 }
 
 func pdf(c *gin.Context, filename, name string) {
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	httpClient := &http.Client{Timeout: 20 * time.Second, Transport: tr}
+
 	req, err := http.NewRequest("GET", filename, nil)
 	if err != nil {
 		log.Printf("http.NewRequest filename(%s) error(%v)", filename, err)
 		return
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		log.Printf("http.DefaultClient.Do error(%v)", err)
 		return
