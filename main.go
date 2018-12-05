@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -47,23 +45,23 @@ func scan(c *gin.Context) {
 }
 
 func pdf(c *gin.Context, filename, name string) {
-	// req, _ := http.NewRequest("GET", filename, nil)
+	req, _ := http.NewRequest("GET", filename, nil)
 
-	// resp, _ := http.DefaultClient.Do(req)
-	// f, err := os.OpenFile("./static/pdf/"+name, os.O_RDWR|os.O_CREATE, 0755)
-	// if err == nil {
-	// 	// io.Copy(f, resp.Body)
-	// 	f.Close()
-	// }
-	// defer resp.Body.Close()
-
-	streamPDFbytes, err := ioutil.ReadFile("./static/pdf/" + name)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	resp, _ := http.DefaultClient.Do(req)
+	f, err := os.OpenFile("./static/pdf/"+name, os.O_RDWR|os.O_CREATE, 0755)
+	if err == nil {
+		io.Copy(f, resp.Body)
+		f.Close()
 	}
-	buf := bytes.NewBuffer(streamPDFbytes)
-	c.Writer.Header().Set("Content-type", "application/pdf")
+	defer resp.Body.Close()
+
+	//streamPDFbytes, err := ioutil.ReadFile("./static/pdf/" + name)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	os.Exit(1)
+	//}
+	//buf := bytes.NewBuffer(streamPDFbytes)
+	//c.Writer.Header().Set("Content-type", "application/pdf")
 
 	//1. buf.WriteTo
 	// if _, err := buf.WriteTo(c.Writer); err != nil {
@@ -71,19 +69,19 @@ func pdf(c *gin.Context, filename, name string) {
 	// }
 
 	//2. 使用io.Pipe()开启读写双通道， io.Copy
-	piper, pipew := io.Pipe()
-	go func() {
-		defer pipew.Close()
-		io.Copy(pipew, buf)
-	}()
-	io.Copy(c.Writer, piper)
-	piper.Close()
+	//piper, pipew := io.Pipe()
+	//go func() {
+	//	defer pipew.Close()
+	//	io.Copy(pipew, buf)
+	//}()
+	//io.Copy(c.Writer, piper)
+	//piper.Close()
 
-	// m := " <iframe id='iframe' frameborder='0' src='/static/web/viewer.html?file=/static/pdf/" + name + "' style='width:100%;'></iframe>"
-	// fmt.Println(m)
-	// c.HTML(http.StatusOK, "index.tmpl", gin.H{
-	// 	"data": template.HTML(m),
-	// })
+	m := " <iframe id='iframe' frameborder='0' src='/static/web/viewer.html?file=/static/pdf/" + name + "' style='width:100%;'></iframe>"
+	fmt.Println(m)
+	c.HTML(http.StatusOK, "index.tmpl", gin.H{
+		"data": template.HTML(m),
+	})
 }
 
 func office(c *gin.Context, filename string) {
