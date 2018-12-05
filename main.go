@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"html/template"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 //	eng.C.Redirect(")
@@ -20,16 +21,15 @@ func main() {
 
 	// Query string parameters are parsed using the existing underlying request object.
 	// The request responds to a url matching:  /welcome?firstname=Jane&lastname=Doe
-	r := router.Group("down")
+	r := router.Group("file")
 	{
-		r.GET("/ping", server)
-		r.GET("/pong", pong)
+		r.GET("/scan", scan)
 
 	}
-	router.Run(":80")
+	router.Run(":8080")
 }
 
-func pong(c *gin.Context) {
+func scan(c *gin.Context) {
 	filename := c.Query("filename")
 	name := strings.Split(filename, "/")
 	name = name[len(name)-1:]
@@ -42,17 +42,6 @@ func pong(c *gin.Context) {
 	case "DOC", "DOCX":
 		office(c, filename)
 	}
-}
-
-func office(c *gin.Context, filename string) {
-
-	src := "https://docview.mingdao.com/op/view.aspx?src=" + filename
-	m := " <iframe id='iframe' frameborder='0' src='" + src + "' style='width:100%;'></iframe>"
-
-	c.HTML(http.StatusOK, "index.tmpl", gin.H{
-		"data": template.HTML(m),
-	})
-
 }
 
 func pdf(c *gin.Context, filename, name string) {
@@ -73,22 +62,12 @@ func pdf(c *gin.Context, filename, name string) {
 	})
 }
 
-func server(c *gin.Context) {
-	filename := c.Query("filename") // shortcut for c.Request.URL.Query().Get("lastname")
-	fmt.Println(filename)
-	name := strings.Split(filename, "/")
-	name = name[len(name)-1:]
-	resp, err := http.Get(filename)
-	defer resp.Body.Close()
-	if err == nil {
-		f, err := os.Create("/usr/local/openresty/nginx/html/pdf/pdf/" + name[0])
-		fmt.Println("err->", err)
-		io.Copy(f, resp.Body)
-		f.Close()
-	}
+func office(c *gin.Context, filename string) {
+	src := "https://docview.mingdao.com/op/view.aspx?src=" + filename
+	m := " <iframe id='iframe' frameborder='0' src='" + src + "' style='width:100%;'></iframe>"
 
-	pdf := "http://58.87.64.219/web/viewer.html?file=http://58.87.64.219/pdf/pdf/" + name[0]
-	//c.SaveUploadedFile()
-	//c.Redirect(http.StatusMovedPermanently, ")
-	c.Redirect(http.StatusMovedPermanently, pdf)
+	c.HTML(http.StatusOK, "index.tmpl", gin.H{
+		"data": template.HTML(m),
+	})
+
 }

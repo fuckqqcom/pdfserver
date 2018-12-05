@@ -1,0 +1,13 @@
+.idea
+.vscode
+main
+
+*.exe
+*.exe~
+*.out
+
+
+*.dll
+*.so
+*.dylib
+*.gdb_history
