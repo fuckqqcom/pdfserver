@@ -2,6 +2,8 @@
 .vscode
 main
 
+static/pdf/
+
 *.exe
 *.exe~
 *.out
@@ -11,3 +13,4 @@ main
 *.so
 *.dylib
 *.gdb_history
+

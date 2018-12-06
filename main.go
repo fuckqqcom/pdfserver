@@ -1,12 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
+	"crypto/tls"
 	"html/template"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,6 +42,7 @@ func scan(c *gin.Context) {
 
 	switch strings.ToUpper(suffix) {
 	case "PDF":
+		println(filename, name[0])
 		pdf(c, filename, name[0])
 	case "DOC", "DOCX":
 		office(c, filename)
@@ -45,38 +50,46 @@ func scan(c *gin.Context) {
 }
 
 func pdf(c *gin.Context, filename, name string) {
-	req, _ := http.NewRequest("GET", filename, nil)
 
-	resp, _ := http.DefaultClient.Do(req)
-	f, err := os.OpenFile("./static/pdf/"+name, os.O_RDWR|os.O_CREATE, 0755)
-	if err == nil {
-		i, err := io.Copy(f, resp.Body)
-		fmt.Println("copy", i, err)
-		f.Close()
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	httpClient := &http.Client{Timeout: 20 * time.Second, Transport: tr}
+
+	req, err := http.NewRequest("GET", filename, nil)
+	if err != nil {
+		log.Printf("http.NewRequest filename(%s) error(%v)", filename, err)
+		return
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.Printf("http.DefaultClient.Do error(%v)", err)
+		return
 	}
 	defer resp.Body.Close()
 
-	//streamPDFbytes, err := ioutil.ReadFile("./static/pdf/" + name)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	os.Exit(1)
-	//}
-	//buf := bytes.NewBuffer(streamPDFbytes)
-	//c.Writer.Header().Set("Content-type", "application/pdf")
+	streamPDFbytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("ioutil.ReadAll error(%v)", err)
+		return
+	}
 
-	//1. buf.WriteTo
-	//if _, err := buf.WriteTo(c.Writer); err != nil {
-	//	fmt.Fprintf(c.Writer, "%s", err)
-	//}
+	f, err := os.OpenFile("./static/pdf/"+name, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		log.Printf("os.OpenFile name(%s) error(%v)", "./static/pdf/"+name, err)
+		return
+	}
+	defer f.Close()
 
-	//2. 使用io.Pipe()开启读写双通道， io.Copy
-	//piper, pipew := io.Pipe()
-	//go func() {
-	//	defer pipew.Close()
-	//	io.Copy(pipew, buf)
-	//}()
-	//io.Copy(f, piper)
-	//piper.Close()
+	buf := bytes.NewBuffer(streamPDFbytes)
+	piper, pipew := io.Pipe()
+	go func() {
+		defer pipew.Close()
+		io.Copy(pipew, buf)
+	}()
+	io.Copy(f, piper)
+	piper.Close()
 
 	m := " <iframe id='iframe' frameborder='0' src='/static/web/viewer.html?file=/static/pdf/" + name + "' style='width:100%;'></iframe>"
 	// fmt.Println(m)
